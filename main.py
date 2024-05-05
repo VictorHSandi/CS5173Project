@@ -64,6 +64,7 @@ class Client():
                          command=lambda: self.goAhead(self.passphraseEntry.get(), self.nameEntry.get()))
         self.go.place(relx=0.5, rely=0.6, anchor=CENTER)
 
+        self.root.protocol("WM_DELETE_WINDOW", self.closeApp)
         self.root.mainloop()
 
     def goAhead(self, passkey, name):
@@ -79,6 +80,10 @@ class Client():
 
         receive_thread = threading.Thread(target=self.receive_messages)
         receive_thread.start()
+
+    def closeApp(self):
+        self.client_socket.close()
+        self.root.destroy()
 
     def layout(self):
 
@@ -161,8 +166,6 @@ class Client():
             message = f"{self.name}-> {self.cipher} {self.msg.nonce}"
             self.client_socket.send(message.encode(self.FORMAT))
             break
-
-
 
 
 if __name__ == "__main__":
