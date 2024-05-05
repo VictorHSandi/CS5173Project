@@ -83,6 +83,10 @@ class Client():
         receive_thread = threading.Thread(target=self.receive_messages)
         receive_thread.start()
 
+    def closeApp(self):
+        self.client_socket.close()
+        self.root.destroy()
+
     def layout(self):
 
         self.root.deiconify()
@@ -181,8 +185,6 @@ class Client():
     def closeApp(self):
         self.client_socket.close()
         self.root.destroy()
-
-
 
 if __name__ == "__main__":
     key = b'\xa4\x8dJT\x8a<\xf6\xcen\x0bvj\xf1j\x9ct'

@@ -12,8 +12,10 @@ server.bind(ADDRESS)
 
 clients = []
 names = []
+phrases = []
 
 SERVER_PASSPHRASE = "ALICEBOB123"
+
 
 def startChat():
     server.listen(5)
@@ -35,32 +37,36 @@ def startChat():
             names.append(name)
             clients.append(conn)
 
-            print(f"Name is :{name}")
+            print(f"Name is: {name}")
 
             broadcastMessage(f"{name} has joined the chat!".encode(FORMAT), conn, True)
 
             conn.send('Connection successful!'.encode(FORMAT))
 
             thread = threading.Thread(target=handle_client,
-                                      args=(conn, addr), daemon=True)
+                                      args=(conn, addr, name), daemon=True)
             thread.start()
 
             print(f"active connections {threading.active_count() - 1}")
 
 
-def handle_client(client_socket, addr):
+def handle_client(client_socket, addr, name):
     print(f"new connection {addr}")
-    connected = True
 
-    while connected:
+    while True:
         # receive message
-        message = client_socket.recv(1024)
+        try:
+            message = client_socket.recv(1024)
 
-        # broadcast message
-        broadcastMessage(message, client_socket, False)
+            # broadcast message
+            broadcastMessage(message, client_socket, False)
 
-    # close the connection
-    client_socket.close()
+        except:
+            print(f"{name} disconnected")
+            client_socket.close()
+            clients.remove(client_socket)
+            broadcastMessage(f"{name} has disconnected.".encode(FORMAT), client_socket, False)
+            break
 
 
 def broadcastMessage(message, client_socket, forAll):
