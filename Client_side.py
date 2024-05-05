@@ -1,39 +1,33 @@
-# Python program to implement client side of chat room.
 import socket
-import select
-import sys
+import threading
 
-server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-if len(sys.argv) != 3:
-	print ("Correct usage: script, IP address, port number")
-	exit()
-IP_address = str(sys.argv[1])
-Port = int(sys.argv[2])
-server.connect((IP_address, Port))
 
-while True:
+def receive_messages(client_socket):
+    while True:
+        try:
+            message = client_socket.recv(1024).decode()
+            print("\n" + message)
+        except:
+            print("Connection lost.")
+            client_socket.close()
+            break
 
-	# maintains a list of possible input streams
-	sockets_list = [sys.stdin, server]
 
-	""" There are two possible input situations. Either the 
-	user wants to give manual input to send to other people, 
-	or the server is sending a message to be printed on the 
-	screen. Select returns from sockets_list, the stream that 
-	is reader for input. So for example, if the server wants 
-	to send a message, then the if condition will hold true 
-	below.If the user wants to send a message, the else 
-	condition will evaluate as true"""
-	read_sockets,write_socket, error_socket = select.select(sockets_list,[],[])
+def main():
+    server_ip = "52.146.11.70"
+    server_port = 9000
 
-	for socks in read_sockets:
-		if socks == server:
-			message = socks.recv(2048)
-			print (message)
-		else:
-			message = sys.stdin.readline()
-			server.send(message)
-			sys.stdout.write("<You>")
-			sys.stdout.write(message)
-			sys.stdout.flush()
-server.close()
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    client_socket.connect((server_ip, server_port))
+    print("Connected")
+
+    receive_thread = threading.Thread(target=receive_messages, args=(client_socket,))
+    receive_thread.start()
+
+    while True:
+        message = input()
+        client_socket.send(message.encode())
+
+
+if __name__ == "__main__":
+    main()

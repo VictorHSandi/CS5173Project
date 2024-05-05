@@ -1,10 +1,20 @@
 from tkinter import *
 import os
 import ctypes
+from AESAlgorithm import AESAlgorithm
+from Crypto.Random import get_random_bytes
+import socket
+import threading
 
 
-class GUI():
-    def __init__(self):
+class Client():
+    def __init__(self, arg):
+        self.passkey = None
+        self.FORMAT = 'utf-8'
+        self.client_socket = None
+        self.aes = AESAlgorithm(arg)
+        self.buttonMsg = None
+        self.cipher = None
         self.msg = None
         self.entryMsg = None
         self.labelBottom = None
@@ -21,49 +31,61 @@ class GUI():
         ctypes.windll.shcore.SetProcessDpiAwareness(1)
         self.root.withdraw()
         self.root.geometry("600x900")
-        self.root.resizable(0, 0)
+        self.root.resizable(False, False)
         self.root.configure(bg=self.bg_blue)
         self.root.iconbitmap(icon)
         self.root.wm_title("Secure P2P Messaging")
 
         self.login = Toplevel()
         self.login.geometry("600x400")
-        self.login.resizable(0, 0)
+        self.login.resizable(False, False)
         self.login.wm_title("Passphrase Entry")
         self.login.iconbitmap(icon)
         self.login.configure(bg=self.bg_blue)
 
-        self.pas = Label(self.login, text="Enter Passphrase", justify="center", font="Courier 18")
-        self.pas.place(relx=0.5, rely=0.4, anchor=CENTER)
-        self.pas.configure(bg=self.bg_blue)
+        self.nameLabel = Label(self.login, text="Enter Name", justify="center", font="Courier 18")
+        self.nameLabel.place(relx=0.5, rely=0.2, anchor=CENTER)
+        self.nameLabel.configure(bg=self.bg_blue)
 
-        self.entryName = Entry(self.login, font="Helvetica 14")
-        self.entryName.place(relx=0.5, rely=0.5, anchor=CENTER)
-        self.entryName.config(bg=self.bg_light_blue,fg=self.text_color)
-        self.entryName.focus()
-        self.go = Button(self.login, text="Enter", font="Courier 18 bold",
-                         bg=self.bg_light_blue,
-                         fg=self.text_color,
-                         command=lambda: self.goAhead(self.entryName.get()))
+        self.nameEntry = Entry(self.login, font="Helvetica 14")
+        self.nameEntry.place(relx=0.5, rely=0.3, anchor=CENTER)
+        self.nameEntry.config(bg=self.bg_light_blue, fg=self.text_color)
+        self.nameEntry.focus()
+
+        self.passphraseLabel = Label(self.login, text="Enter Passphrase", justify="center", font="Courier 18")
+        self.passphraseLabel.place(relx=0.5, rely=0.4, anchor=CENTER)
+        self.passphraseLabel.configure(bg=self.bg_blue)
+
+        self.passphraseEntry = Entry(self.login, font="Helvetica 14")
+        self.passphraseEntry.place(relx=0.5, rely=0.5, anchor=CENTER)
+        self.passphraseEntry.config(bg=self.bg_light_blue, fg=self.text_color)
+
+        self.go = Button(self.login, text="Enter", font="Courier 18 bold", bg=self.bg_light_blue, fg=self.text_color,
+                         command=lambda: self.goAhead(self.passphraseEntry.get(), self.nameEntry.get()))
         self.go.place(relx=0.5, rely=0.6, anchor=CENTER)
 
         self.root.mainloop()
 
-    def goAhead(self, passkey):
-        self.login.destroy()
-        self.layout(passkey)
-
-    def layout(self, name):
+    def goAhead(self, passkey, name):
         self.name = name
+        self.passkey = passkey
+        self.login.destroy()
+        self.layout()
+
+        server_ip = "52.146.11.70"
+        server_port = 9000
+        self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.client_socket.connect((server_ip, server_port))
+
+        receive_thread = threading.Thread(target=self.receive_messages)
+        receive_thread.start()
+
+    def layout(self):
+
         self.root.deiconify()
 
-        self.textCons = Text(self.root,
-                             width=1,
-                             height=1,
-                             bg=self.bg_dark_blue,
-                             fg=self.text_color,
-                             font="Courier 14",
-                             )
+        self.textCons = Text(self.root, width=1, height=1, bg=self.bg_dark_blue, fg=self.text_color, font="Courier 14",
+                             padx=70, pady=10)
         self.textCons.place(relwidth=2, relheight=2, relx=-0.1)
         self.labelBottom = Label(self.root, bg=self.bg_blue, height=5)
 
@@ -94,18 +116,55 @@ class GUI():
 
         scrollbar = Scrollbar(self.textCons)
         scrollbar.place(relheight=0.46, relx=0.52, rely=0.005)
-        scrollbar.config(command=self.textCons.yview, bg=self.bg_blue)
+        scrollbar.config(command=self.textCons.yview)
 
         self.textCons.config(state=DISABLED)
 
     def sendButton(self, msg):
         self.textCons.config(state=DISABLED)
-        self.msg = msg
+        self.msg = self.aes.encrypt(msg)
+        self.cipher = self.msg.ciphertext
         self.entryMsg.delete(0, END)
+        snd = threading.Thread(target=self.sendMessage)
+        snd.start()
 
-    def receive(self):
-        print("Recieved")
+    def receive_messages(self):
+        while True:
+            try:
+                message = self.client_socket.recv(1024).decode(self.FORMAT)
+                if message == '123NAME123':
+                    self.client_socket.send(self.name.encode(self.FORMAT))
+                elif message == "123PASS123":
+                    self.client_socket.send(self.passkey.encode(self.FORMAT))
+                elif message == "WRONG":
+                    self.client_socket.close()
+                    break
+                else:
+                    self.textCons.config(state=NORMAL)
+                    self.textCons.insert(END, message + f" (Decrypted to [plaintext])\n")
+                    self.textCons.config(state=DISABLED)
+                    self.textCons.see(END)
+            except:
+                print("An error occurred!")
+                self.client_socket.close()
+                break
 
     def sendMessage(self):
-        print("Sent")
-gui = GUI()
+        self.textCons.config(state=NORMAL)
+        self.textCons.insert(END, f"{self.name}-> {self.cipher}" + "\n")
+        self.textCons.config(state=DISABLED)
+        self.textCons.see(END)
+
+        self.textCons.config(state=DISABLED)
+
+        while True:
+            message = f"{self.name}-> {self.cipher} {self.msg.nonce}"
+            self.client_socket.send(message.encode(self.FORMAT))
+            break
+
+
+
+
+if __name__ == "__main__":
+    key = get_random_bytes(16)  # 16 bytes key for AES-128
+    client = Client(key)
