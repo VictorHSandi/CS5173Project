@@ -1,7 +1,7 @@
 import socket
 import threading
 
-FORMAT = 'utf-8'
+FORMAT = 'ISO-8859-1'
 PRIVATE_IP = '10.1.0.4'
 PORT = 9000
 ADDRESS = (PRIVATE_IP, PORT)
@@ -11,8 +11,6 @@ print("Server Initiated on " + PRIVATE_IP)
 server.bind(ADDRESS)
 
 rooms = []
-
-SERVER_PASSPHRASE = "ALICEBOB123"
 
 
 def startChat():
@@ -49,18 +47,21 @@ class Chatroom:
         self.clients = []
         self.names = []
         self.hash = hash
+        thread = threading.Thread(target=self.negotiate_key)
 
     def add_client(self, conn, addr, name):
         self.clients.append(conn)
         print(f"Name is: {name}")
 
         conn.send('Connection successful.'.encode(FORMAT))
+        self.broadcastMessage(f"{name} has joined the chat!".encode(FORMAT), conn, True)
 
         if len(self.names) != 0:
             for other in self.names:
                 conn.send(f"{other} is already in the chat.\n".encode(FORMAT))
+        else:
+            conn.send(f"Waiting on second user...\n".encode(FORMAT))
         self.names.append(name)
-        self.broadcastMessage(f"{name} has joined the chat!".encode(FORMAT), conn, True)
 
         thread = threading.Thread(target=self.handle_client,
                                   args=(conn, addr, name), daemon=True)
@@ -97,6 +98,13 @@ class Chatroom:
             else:
                 if client != client_socket:
                     client.send(message)
+
+    def negotiate_key(self):
+        while True:
+            if len(self.clients) == 2:
+                self.broadcastMessage("123KEY123".encode(FORMAT), None, True)
+                break
+        self.broadcastMessage("123KEY123".encode(FORMAT), None, True)
 
 
 startChat()

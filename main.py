@@ -146,8 +146,8 @@ class Client():
                     sha256_hash = hashlib.sha256()
                     sha256_hash.update(self.passkey.encode(self.FORMAT))
                     self.client_socket.send(sha256_hash.hexdigest().encode(self.FORMAT))
-                elif message == "WRONG":
-                    self.client_socket.close()
+                elif message == "123KEY123":
+
                     break
                 else:
                     ciphernonce = re.split("\> (.*)\s(.*)", message)
@@ -187,5 +187,5 @@ class Client():
         self.root.destroy()
 
 if __name__ == "__main__":
-    key = b'\xa4\x8dJT\x8a<\xf6\xcen\x0bvj\xf1j\x9ct'
-    client = Client(key)
+    #key = b'\xa4\x8dJT\x8a<\xf6\xcen\x0bvj\xf1j\x9ct'
+    client = Client(get_random_bytes(16))
