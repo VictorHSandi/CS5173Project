@@ -7,6 +7,8 @@ import socket
 import threading
 import re
 import hashlib
+import random
+
 
 class Client():
     def __init__(self, arg):
@@ -147,8 +149,26 @@ class Client():
                     sha256_hash.update(self.passkey.encode(self.FORMAT))
                     self.client_socket.send(sha256_hash.hexdigest().encode(self.FORMAT))
                 elif message == "123KEY123":
-
-                    break
+                    print("Generating keys...")
+                    try:
+                        p = eval(self.client_socket.recv(1024).decode(self.FORMAT))
+                        print(p)
+                        g = eval(self.client_socket.recv(1024).decode(self.FORMAT))
+                        print(g)
+                        sa = random.randint(10, 1000)
+                        print(sa)
+                        ta = pow(g, sa, p)
+                        print(ta)
+                        self.client_socket.send(str(ta).encode(self.FORMAT))
+                        tb = eval(self.client_socket.recv(1024).decode(self.FORMAT))
+                        print(tb)
+                        key = pow(tb, sa, p)
+                        print(key)
+                        self.aes.key = key
+                    except Exception as ex:
+                        print("An error occurred! Details: \n" + str(ex))
+                        self.aes.key = get_random_bytes(16)
+                    self.aes.key = 1
                 else:
                     ciphernonce = re.split("\> (.*)\s(.*)", message)
                     if len(ciphernonce) > 2:
@@ -182,10 +202,8 @@ class Client():
             self.client_socket.send(message.encode(self.FORMAT))
             break
 
-    def closeApp(self):
-        self.client_socket.close()
-        self.root.destroy()
 
 if __name__ == "__main__":
-    #key = b'\xa4\x8dJT\x8a<\xf6\xcen\x0bvj\xf1j\x9ct'
-    client = Client(get_random_bytes(16))
+    key = b'\xa4\x8dJT\x8a<\xf6\xcen\x0bvj\xf1j\x9ct'
+    #key = get_random_bytes(16)
+    client = Client(key)

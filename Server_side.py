@@ -5,6 +5,8 @@ FORMAT = 'ISO-8859-1'
 PRIVATE_IP = '10.1.0.4'
 PORT = 9000
 ADDRESS = (PRIVATE_IP, PORT)
+PRIME = 903913
+ROOT = 126
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 print("Server Initiated on " + PRIVATE_IP)
@@ -47,14 +49,15 @@ class Chatroom:
         self.clients = []
         self.names = []
         self.hash = hash
-        thread = threading.Thread(target=self.negotiate_key)
+        thread = threading.Thread(target=self.negotiate_key, daemon=True)
+        thread.start()
 
     def add_client(self, conn, addr, name):
         self.clients.append(conn)
         print(f"Name is: {name}")
 
         conn.send('Connection successful.'.encode(FORMAT))
-        self.broadcastMessage(f"{name} has joined the chat!".encode(FORMAT), conn, True)
+        self.broadcastMessage(f"{name} has joined the chat!\n".encode(FORMAT), conn, True)
 
         if len(self.names) != 0:
             for other in self.names:
@@ -63,15 +66,9 @@ class Chatroom:
             conn.send(f"Waiting on second user...\n".encode(FORMAT))
         self.names.append(name)
 
-        thread = threading.Thread(target=self.handle_client,
-                                  args=(conn, addr, name), daemon=True)
-        thread.start()
+        print(f"active connections {threading.active_count() - 1 - len(rooms)}")
 
-        print(f"active connections {threading.active_count() - 1}")
-
-    def handle_client(self, client_socket, addr, name):
-        print(f"new connection {addr}")
-
+    def handle_client(self, client_socket, name):
         while True:
             # receive message
             try:
@@ -101,10 +98,20 @@ class Chatroom:
 
     def negotiate_key(self):
         while True:
-            if len(self.clients) == 2:
+            if len(self.names) == 2:
                 self.broadcastMessage("123KEY123".encode(FORMAT), None, True)
                 break
-        self.broadcastMessage("123KEY123".encode(FORMAT), None, True)
+        self.broadcastMessage(str(PRIME).encode(FORMAT), None, True)
+        self.broadcastMessage(str(ROOT).encode(FORMAT), None, True)
+        ta = self.clients[0].recv(1024)
+        tb = self.clients[1].recv(1024)
+        self.clients[0].send(str(tb).encode(FORMAT))
+        self.clients[1].send(str(ta).encode(FORMAT))
+
+        for conn, name in zip(self.clients, self.names):
+            thread = threading.Thread(target=self.handle_client,
+                                      args=(conn, name), daemon=True)
+            thread.start()
 
 
 startChat()
