@@ -5,12 +5,14 @@ from AESAlgorithm import AESAlgorithm
 from Crypto.Random import get_random_bytes
 import socket
 import threading
-
+import re
+import hashlib
 
 class Client():
     def __init__(self, arg):
+        self.nonce = None
         self.passkey = None
-        self.FORMAT = 'utf-8'
+        self.FORMAT = 'ISO-8859-1'
         self.client_socket = None
         self.aes = AESAlgorithm(arg)
         self.buttonMsg = None
@@ -64,6 +66,7 @@ class Client():
                          command=lambda: self.goAhead(self.passphraseEntry.get(), self.nameEntry.get()))
         self.go.place(relx=0.5, rely=0.6, anchor=CENTER)
 
+        self.root.protocol("WM_DELETE_WINDOW", self.closeApp)
         self.root.mainloop()
 
     def goAhead(self, passkey, name):
@@ -124,6 +127,7 @@ class Client():
         self.textCons.config(state=DISABLED)
         self.msg = self.aes.encrypt(msg)
         self.cipher = self.msg.ciphertext
+        self.nonce = self.msg.nonce
         self.entryMsg.delete(0, END)
         snd = threading.Thread(target=self.sendMessage)
         snd.start()
@@ -135,23 +139,35 @@ class Client():
                 if message == '123NAME123':
                     self.client_socket.send(self.name.encode(self.FORMAT))
                 elif message == "123PASS123":
-                    self.client_socket.send(self.passkey.encode(self.FORMAT))
+                    sha256_hash = hashlib.sha256()
+                    sha256_hash.update(self.passkey.encode(self.FORMAT))
+                    self.client_socket.send(sha256_hash.hexdigest().encode(self.FORMAT))
                 elif message == "WRONG":
                     self.client_socket.close()
                     break
                 else:
-                    self.textCons.config(state=NORMAL)
-                    self.textCons.insert(END, message + f" (Decrypted to [plaintext])\n")
-                    self.textCons.config(state=DISABLED)
-                    self.textCons.see(END)
-            except:
-                print("An error occurred!")
+                    ciphernonce = re.split("\> (.*)\s(.*)", message)
+                    if len(ciphernonce) > 2:
+                        ciphertext = eval(ciphernonce[1])
+                        nonce = eval(ciphernonce[2])
+                        plaintext = self.aes.raw_decrypt(ciphertext, nonce)
+                        self.textCons.config(state=NORMAL)
+                        self.textCons.insert(END, message + f"\n    Decrypted to {plaintext}\n")
+                        self.textCons.config(state=DISABLED)
+                        self.textCons.see(END)
+                    else:
+                        self.textCons.config(state=NORMAL)
+                        self.textCons.insert(END, message + f"\n")
+                        self.textCons.config(state=DISABLED)
+                        self.textCons.see(END)
+            except Exception as e:
+                print("An error occurred! Details: \n" + str(e))
                 self.client_socket.close()
                 break
 
     def sendMessage(self):
         self.textCons.config(state=NORMAL)
-        self.textCons.insert(END, f"{self.name}-> {self.cipher}" + "\n")
+        self.textCons.insert(END, f"{self.name}-> {self.aes.decrypt(self.msg)}" + f"\n  Sent as {self.cipher}\n")
         self.textCons.config(state=DISABLED)
         self.textCons.see(END)
 
@@ -162,9 +178,12 @@ class Client():
             self.client_socket.send(message.encode(self.FORMAT))
             break
 
+    def closeApp(self):
+        self.client_socket.close()
+        self.root.destroy()
 
 
 
 if __name__ == "__main__":
-    key = get_random_bytes(16)  # 16 bytes key for AES-128
+    key = b'\xa4\x8dJT\x8a<\xf6\xcen\x0bvj\xf1j\x9ct'
     client = Client(key)
