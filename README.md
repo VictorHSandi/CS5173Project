@@ -6,3 +6,6 @@ We used
 * Diffie-Hellman for Key Negotiations
 * Microsoft Azure Server for rendezvous Server
 * Tkinter for Python GUI
+
+Depandencies
+* pycryptodome
