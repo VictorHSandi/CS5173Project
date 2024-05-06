@@ -8,6 +8,7 @@ class ExpirationDate:
         self.initDate = initDate
         self.updateFreq = updateFreq
         self.expDate = initDate #initializing, value to be changed
+        self.genExpDate()
 
     ## incrementing initial date by user specified frequency
     def genExpDate(self):

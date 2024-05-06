@@ -8,6 +8,8 @@ import threading
 import re
 import hashlib
 import random
+import datetime
+from ExpirationDate import ExpirationDate
 
 
 class Client():
@@ -17,6 +19,7 @@ class Client():
         self.FORMAT = 'ISO-8859-1'
         self.client_socket = None
         self.aes = AESAlgorithm(arg)
+        self.expdate = ExpirationDate(datetime.datetime.now(), 1)  # key expires after 1 day
         self.buttonMsg = None
         self.cipher = None
         self.msg = None
@@ -167,6 +170,7 @@ class Client():
                     if len(ciphernonce) > 2:
                         ciphertext = eval(ciphernonce[1])
                         nonce = eval(ciphernonce[2])
+                        self.check(self.expdate)
                         plaintext = self.aes.raw_decrypt(ciphertext, nonce)
                         self.textCons.config(state=NORMAL)
                         self.textCons.insert(END, message + f"\n    Decrypted to {plaintext}\n")
@@ -183,6 +187,7 @@ class Client():
                 break
 
     def sendMessage(self):
+        self.check(self.expdate)
         self.textCons.config(state=NORMAL)
         self.textCons.insert(END, f"{self.name}-> {self.aes.decrypt(self.msg)}" + f"\n  Sent as {self.cipher}\n")
         self.textCons.config(state=DISABLED)
@@ -194,6 +199,10 @@ class Client():
             message = f"{self.name}-> {self.cipher} {self.msg.nonce}"
             self.client_socket.send(message.encode(self.FORMAT))
             break
+
+    def check(self, date):
+        if date.is_expired():
+            self.aes.key = get_random_bytes(16)  # key is randomized, forcing restart of chat
 
 
 if __name__ == "__main__":

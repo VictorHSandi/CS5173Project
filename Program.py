@@ -3,6 +3,8 @@ from Crypto.Random import get_random_bytes
 from Crypto.Util import number
 import random
 import hashlib
+import datetime
+from ExpirationDate import ExpirationDate
 
 key = get_random_bytes(16)  # 16 bytes key for AES-128
 aes = AESAlgorithm(key)
@@ -21,3 +23,6 @@ print(sa)
 num = 261328
 print(num)
 print(hashlib.sha256(num.to_bytes(16,'big')).digest()[:16])
+
+
+expdate = ExpirationDate(datetime.datetime.now(), 1)  # key expires after 1 day
