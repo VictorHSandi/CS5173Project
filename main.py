@@ -15,7 +15,7 @@ from ExpirationDate import ExpirationDate
 class Client():
     def __init__(self, arg):
         self.nonce = None
-        self.passkey = None
+        self.passkey = "default"
         self.FORMAT = 'ISO-8859-1'
         self.client_socket = None
         self.aes = AESAlgorithm(arg)
