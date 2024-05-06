@@ -153,19 +153,12 @@ class Client():
                     print(message)
                     try:
                         p = eval(self.client_socket.recv(1024).decode(self.FORMAT))
-                        print(p)
                         g = eval(self.client_socket.recv(1024).decode(self.FORMAT))
-                        print(g)
                         sa = random.randint(10, 1000)
-                        print(sa)
                         ta = pow(g, sa, p)
-                        print(ta)
                         self.client_socket.send(str(ta).encode(self.FORMAT))
                         tb = eval(self.client_socket.recv(1024).decode(self.FORMAT))
-                        print(tb)
-                        key = hashlib.sha256(pow(tb, sa, p).to_bytes(16, 'big')).digest()[:16]
-                        print(key)
-                        self.aes.key = key
+                        self.aes.key = hashlib.sha256(pow(tb, sa, p).to_bytes(16, 'big')).digest()[:16]
                     except Exception as ex:
                         print("An error occurred! Details: \n" + str(ex))
                         self.aes.key = get_random_bytes(16)
@@ -204,6 +197,5 @@ class Client():
 
 
 if __name__ == "__main__":
-    key = b'\xa4\x8dJT\x8a<\xf6\xcen\x0bvj\xf1j\x9ct'
-    #key = get_random_bytes(16)
+    key = get_random_bytes(16)
     client = Client(key)
