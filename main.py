@@ -148,8 +148,9 @@ class Client():
                     sha256_hash = hashlib.sha256()
                     sha256_hash.update(self.passkey.encode(self.FORMAT))
                     self.client_socket.send(sha256_hash.hexdigest().encode(self.FORMAT))
-                elif message == "123KEY123":
+                elif message[:9] == "123KEY123":
                     print("Generating keys...")
+                    print(message)
                     try:
                         p = eval(self.client_socket.recv(1024).decode(self.FORMAT))
                         print(p)
@@ -162,13 +163,12 @@ class Client():
                         self.client_socket.send(str(ta).encode(self.FORMAT))
                         tb = eval(self.client_socket.recv(1024).decode(self.FORMAT))
                         print(tb)
-                        key = pow(tb, sa, p)
+                        key = hashlib.sha256(pow(tb, sa, p).to_bytes(16, 'big')).digest()[:16]
                         print(key)
                         self.aes.key = key
                     except Exception as ex:
                         print("An error occurred! Details: \n" + str(ex))
                         self.aes.key = get_random_bytes(16)
-                    self.aes.key = 1
                 else:
                     ciphernonce = re.split("\> (.*)\s(.*)", message)
                     if len(ciphernonce) > 2:

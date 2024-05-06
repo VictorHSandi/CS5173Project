@@ -1,5 +1,6 @@
 import socket
 import threading
+import time
 
 FORMAT = 'ISO-8859-1'
 PRIVATE_IP = '10.1.0.4'
@@ -49,24 +50,27 @@ class Chatroom:
         self.clients = []
         self.names = []
         self.hash = hash
-        thread = threading.Thread(target=self.negotiate_key, daemon=True)
-        thread.start()
 
     def add_client(self, conn, addr, name):
         self.clients.append(conn)
         print(f"Name is: {name}")
 
         conn.send('Connection successful.'.encode(FORMAT))
-        self.broadcastMessage(f"{name} has joined the chat!\n".encode(FORMAT), conn, True)
+        time.sleep(50 / 1000)
+        self.broadcastMessage(f"{name} has joined the chat!".encode(FORMAT), conn, True)
+        time.sleep(50 / 1000)
 
         if len(self.names) != 0:
             for other in self.names:
-                conn.send(f"{other} is already in the chat.\n".encode(FORMAT))
+                conn.send(f"{other} is already in the chat.".encode(FORMAT))
+                time.sleep(50 / 1000)
         else:
-            conn.send(f"Waiting on second user...\n".encode(FORMAT))
+            conn.send(f"Waiting on second user...".encode(FORMAT))
+            time.sleep(50 / 1000)
         self.names.append(name)
 
-        print(f"active connections {threading.active_count() - 1 - len(rooms)}")
+        if len(self.clients) == 2:
+            self.negotiate_key()
 
     def handle_client(self, client_socket, name):
         while True:
@@ -92,19 +96,19 @@ class Chatroom:
         for client in self.clients:
             if forAll:
                 client.send(message)
+                time.sleep(50 / 1000)
             else:
                 if client != client_socket:
                     client.send(message)
+                    time.sleep(50 / 1000)
 
     def negotiate_key(self):
-        while True:
-            if len(self.names) == 2:
-                self.broadcastMessage("123KEY123".encode(FORMAT), None, True)
-                break
+        time.sleep(50 / 1000)
+        self.broadcastMessage("123KEY123".encode(FORMAT), None, True)
         self.broadcastMessage(str(PRIME).encode(FORMAT), None, True)
         self.broadcastMessage(str(ROOT).encode(FORMAT), None, True)
-        ta = self.clients[0].recv(1024)
-        tb = self.clients[1].recv(1024)
+        ta = self.clients[0].recv(1024).decode(FORMAT)
+        tb = self.clients[1].recv(1024).decode(FORMAT)
         self.clients[0].send(str(tb).encode(FORMAT))
         self.clients[1].send(str(ta).encode(FORMAT))
 
